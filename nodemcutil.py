@@ -124,6 +124,9 @@ class nodemcu:
 			fil = fil.split(" ")
 			print "%5d %s" % (int(fil[0]), fil[1])
 
+	def execute_file(self, filename):
+		self.write("dofile(\"" + filename + "\")")
+
 if __name__ == '__main__':
 	# parse arguments or use defaults
 	parser = argparse.ArgumentParser(description='NodeMCU file transfer utility')
@@ -134,6 +137,7 @@ if __name__ == '__main__':
 	group.add_argument('-r', '--receive', help='Transfer file from flash to host')
 	group.add_argument('-l', '--list',    action="store_true",     help='List flash filesystem files')
 	group.add_argument('-d', '--delete',  help='Delete file from flash')
+	group.add_argument('-e', '--execute', help='Execute the specified file')
 	args = parser.parse_args()
 
 	node = nodemcu(args.port, args.baud)
@@ -148,6 +152,7 @@ if __name__ == '__main__':
 	if args.delete:
 		node.delete_file(args.delete)
 
+
 	if args.receive:
 		#node.file_read_from_node(args.receive)
 		print "receive not implemented (yet)"
@@ -155,3 +160,6 @@ if __name__ == '__main__':
 
 	if args.send:
 		node.write_to_node(args.send, args.send)
+
+	if args.execute:
+		node.execute_file(args.execute)
