@@ -35,9 +35,9 @@ class nodemcu:
 	def write(self, data):
 		self.device.write(data + "\r") # NodeMCU uses <CR> as line end
 		self.device.read(len(data) + 1) # read back the sent characters (echoed)
+		self.device.read() # read and drop leading linefeed
 
 	def read(self):
-		self.device.read() # read and drop leading linefeed
 		found_eod = False
 		data = ""
 		eod1 = "> " # prompt can be "> "
@@ -81,10 +81,17 @@ class nodemcu:
 		if self.file_exists(filename):
 			self.execute("file.open(\"" + filename + "\")")
 			fsize = self.execute("print(file.seek(\"end\", 0))")[0]
-			# no file.read() implemented (yet?) in NodeMCU, so this function is not (yet) implemented
+			self.execute("file.seek(\"set\", 0)")
+			self.execute("for cnt = 1, " + fsize + " do")
+			self.execute("d = file.read(1)")
+			self.execute("uart.write(0, d)")
+			self.write("end")
+			file_content = ""
+			for cnt in range(0, int(fsize)):
+				file_content +=self.device.read(1)
+			self.read()
 			self.execute("file.close()")
-			print fsize
-			return True
+			return file_content
 		return False
 
 	def file_write_to_node(self, filename, data):
@@ -114,7 +121,25 @@ class nodemcu:
 			print "%s does not exist" % filename
 			return False
 		data = f.read()
+		f.close()
 		self.file_write_to_node(node_filename, data)
+		return True
+
+	def read_from_node(self, filename, node_filename):
+		if(not self.file_exists(node_filename)):
+			print "%s does not exist on node" % node_filename
+			return False
+		try:
+			f = open(filename, "wb")
+		except IOError as e:
+			print "cannot write %s" % filename
+			return False
+		data = self.file_read_from_node(node_filename)
+		f.write(data)
+		if data == False:
+			print "cannot read content from node"
+			return False
+		f.close()
 		return True
 
 	def print_file_list(self):
@@ -154,9 +179,7 @@ if __name__ == '__main__':
 
 
 	if args.receive:
-		#node.file_read_from_node(args.receive)
-		print "receive not implemented (yet)"
-		exit(1)
+		node.read_from_node(args.receive, args.receive)
 
 	if args.send:
 		node.write_to_node(args.send, args.send)
